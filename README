@@ -1,0 +1,105 @@
+# SOCM Prototype
+
+SOCM or SAP OIDC Connector Micro-Service is a service that will help SAP interact and exchange data in a trusted and secure fashion with OIDC supported applications as per the specifications of OAuth 2.0. The function of this micro-service is to interpret the JWT (JSON Web Token) from the bearer application (Mendix App), extract its trusted user principal (username) and generate or fetch a short lived X.509 certificate signed by a trusted CA by both parties (trusted by SAP Fiori and the SOCM). It thus uses this certificate to establish a mutual TLS connection with the Web Frontend of the SAP Fiori. Henceforth Fiori returns the data to the SOCM. SOCM, acting as a proxy between Mendix App and SAP Fiori, thus returns the same data to Mendix for use. Just as OIDC was supposed to broker trusted data exchange with the use of bearer tokens, between more than 2 parties in a cloud environment, SOCM does the same as a micro-service by residing outside of the SAP landscape. The micro-service pattern allows it to be unaffected by SAP's change control methods and deployment strategies. Also changes to SOCM will not affect SAP's deployment strategies. SOCM can also be used by other applications trying to communicate with SAP using bearer JSON Web Tokens.
+
+The following repository is an implementation of Candidate 3. 
+
+## 1. Get code from git
+Whether you are working on a windows or Linux or Mac, please checkout the codebase from as below
+
+```commandline
+git clone git clone https://vishnu84@bitbucket.org/wlabs1/socm-svc-proto.git
+cd socm-svc-proto
+git checkout master
+```
+
+You can request access from vishnu@wlabs.cloud
+
+## 2. Configure your landscape parameters
+
+Next up, we need to configure our Azure Appplication. Once the Azure application is setup and you have the details, please provide them in the file `config\dev_env.vars`. The name of the file or the location doesnt matter. You would need to refer to thsi file while running docker-compose.
+
+The env vars file needs to have the following variables in it. The provided values are shown as ane example.
+
+
+### These are the Azure application registration details
+```
+AZURE_APPID=api://7dd87566-90ae-4fbe-a511-b465902255ea
+AZURE_JWKSURI=https://login.microsoftonline.com/ef588e72-fa36-407b-8712-4124e2f35c7a/discovery/v2.0/keys
+AZURE_ISSUER=https://login.microsoftonline.com/ef588e72-fa36-407b-8712-4124e2f35c7a/v2.0
+```
+
+### This is the SAP Fiori endpoint
+```
+SAP_ENDPOINT=https://sapiag01.castling.co:50001/
+```
+
+### This is the number of odata proxy servers to handle load
+```
+ODATA_PROXY_SCALE=5
+```
+
+### These are the Hashicorp Vault Configuration Values and you can keep them as is 
+```
+VAULT_SECRETS_S=5
+VAULT_SECRETS_T=2
+VAULT_RECOVERY_S=2
+VAULT_RECOVERY_T=2
+```
+
+### These are the Vault Root and Sub CA details along with the Client Certificate TTL
+```
+VAULT_ROOTCA_CN="sap.wlabs.cloud Root CA"
+VAULT_SUBCA_CN="sap.wlabs.cloud SubCA"
+VAULT_OU="SAP Fiori"
+VAULT_ORG_NAME="wlabs LLC"
+VAULT_CLIENT_CERT_TTL=2m
+```
+
+### This is the section for Ingress Controller. You can change the INGRESS_CERT_SUBJ to a name of your liking. The certificate is self signed but the CN should reflect the host name. 
+```
+INGRESS_CERT_SUBJ="/C=US/O=wLabs/CN=localhost"
+INGRESS_HTTPS_PORT=443 #This is the exposed port to the outside world
+INGRESS_HTTP_PORT=80 #This is the exposed port to the outside world
+```
+
+## 3. Install Docker
+
+In order to run and setup the prototype, Docker is required. You can install it using the follows
+
+MacOS
+```
+brew install docker
+```
+
+Linux
+```
+apt install docker
+```
+
+Windows
+```
+choco install docker
+```
+## 3. Start Services
+
+In order to run all the services, 
+
+```
+docker-compose --env-file ./config/dev_env.vars up --build --detach 
+```
+
+## 4. Setup SAP 
+The SAP Fiori Server web dispatcher needs to be running as a layer 4 proxy. The SSL certificates that needs to be trusted. You can find the certificates at this location `local-data\certs`. The Azure user needs to be present on SAP Fiori as well. 
+
+Root CA
+The certs are also available at https://<INGRESS_SERVER_NAME>:<INGRESS_HTTPS_PORT>/v1/pki/ca/pem
+The CRL is available at https://<INGRESS_SERVER_NAME>:<INGRESS_HTTPS_PORT>/v1/pki/crl
+
+SubCA
+The certs are also available at https://<INGRESS_SERVER_NAME>:<INGRESS_HTTPS_PORT>/v1/pki_int/ca/pem
+The CRL is available at https://<INGRESS_SERVER_NAME>:<INGRESS_HTTPS_PORT>/v1/pki_int/crl
+
+
+## 5. Test 
+The endpoint that needs to be used at Mendix for OIDC SSO for SAP Fiori is as https://<INGRESS_SERVER_NAME>:<INGRESS_HTTPS_PORT>

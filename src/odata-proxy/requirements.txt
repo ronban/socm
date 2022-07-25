@@ -1,0 +1,10 @@
+Flask==2.0.2
+PyJWT==2.3.0
+cryptography==36.0.1
+requests==2.27.1
+PyOpenSSL==22.0.0
+gunicorn==20.1.0
+fluent-logger==0.10.0
+pyyaml==6.0
+msgpack==1.0.3
+coloredlogs==15.0.1

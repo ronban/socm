@@ -1,0 +1,40 @@
+$policy = New-AzureADPolicy -Definition @('{
+            "ClaimsMappingPolicy": {
+                "Version": 1,
+                "IncludeBasicClaimSet": "true",
+                "ClaimsSchema": [{
+                        "Source": "user",
+                        "ID": "employeeid",
+                        "SamlClaimType": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/employeeid",
+                        "JwtClaimType": "employeeid"
+                    },
+                    {
+                        "Source": "user",
+                        "ID": "mail",
+                        "SamlClaimType": "http://schemas.microsoft.com/identity/claims/emailaddress",
+                        "JwtClaimType": "mail"
+                    },
+                    {
+                        "Source": "user",
+                        "ID": "onpremisessamaccountname",
+                        "SamlClaimType": "samaccountname",
+                        "JwtClaimType": "samAccountName"
+                    },
+                    {
+                        "Source": "user",
+                        "ID": "department",
+                        "SamlClaimType": "http://schemas.microsoft.com/identity/claims/department",
+                        "JwtClaimType": "department"
+                    }
+                ]
+            }
+        }') -DisplayName "MendixClaimsPolicy" -Type "ClaimsMappingPolicy"
+
+$app = Get-AzureADServicePrincipal -Filter "DisplayName eq 'socm-dev'"
+
+$existingPolicy = Get-AzureADServicePrincipalPolicy -Id $app.ObjectId
+Remove-AzureADServicePrincipalPolicy -Id $app.ObjectId -PolicyId $existingPolicy.Id
+
+Add-AzureADServicePrincipalPolicy -Id $app.ObjectId -RefObjectId $policy.Id
+
+Get-AzureADServicePrincipalPolicy -Id $app.ObjectId
